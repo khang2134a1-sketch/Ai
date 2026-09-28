@@ -8,16 +8,15 @@
     * { box-sizing: border-box; margin: 0; padding: 0; font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif; }
     body { display: flex; height: 100vh; background-color: #2b2b2b; color: #ececec; }
     
-    /* Sidebar */
     #sidebar { width: 260px; background-color: #1e1e1e; display: flex; flex-direction: column; border-right: 1px solid #333; }
-    .sidebar-header { padding: 15px; font-weight: bold; font-size: 1.1rem; border-bottom: 1px solid #333; display: flex; justify-content: space-between; align-items: center; }
-    .new-chat-btn { background: #d97757; color: white; border: none; padding: 8px 12px; border-radius: 6px; cursor: pointer; font-size: 0.9rem; width: calc(100% - 30px); margin: 15px; text-align: center; }
+    .sidebar-header { padding: 15px; font-weight: bold; font-size: 1.1rem; border-bottom: 1px solid #333; display: flex; flex-direction: column; gap: 8px; }
+    .status-badge { font-size: 0.75rem; color: #4caf50; background: #1b381e; padding: 4px 8px; border-radius: 4px; display: inline-block; border: 1px solid #2e6033; }
+    .new-chat-btn { background: #d97757; color: white; border: none; padding: 8px 12px; border-radius: 6px; cursor: pointer; font-size: 0.9rem; margin: 15px; text-align: center; }
     .new-chat-btn:hover { background: #c86545; }
     .history-list { flex: 1; overflow-y: auto; padding: 0 15px; }
     .history-item { padding: 10px; margin-bottom: 6px; background: #2a2a2a; border-radius: 6px; cursor: pointer; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; font-size: 0.9rem; }
     .history-item:hover { background: #3a3a3a; }
 
-    /* Main Chat Area */
     #main { flex: 1; display: flex; flex-direction: column; height: 100vh; }
     .chat-header { padding: 15px 20px; border-bottom: 1px solid #333; background: #252525; display: flex; justify-content: space-between; align-items: center; }
     .brand { font-size: 1.2rem; font-weight: bold; color: #d97757; }
@@ -28,54 +27,51 @@
     .bot { background: #1e1e1e; align-self: flex-start; color: #e1e1e1; border-bottom-left-radius: 2px; border: 1px solid #333; }
     .loading { font-style: italic; color: #888; }
 
-    .img-preview { max-width: 100%; max-height: 250px; border-radius: 8px; margin-top: 8px; display: block; }
+    .image-grid { display: flex; flex-wrap: wrap; gap: 8px; margin-top: 8px; }
+    .img-preview { max-width: 200px; max-height: 200px; border-radius: 8px; object-fit: cover; border: 1px solid #444; }
     .file-chip { display: inline-flex; align-items: center; gap: 8px; background: #333; padding: 6px 12px; border-radius: 6px; margin-top: 6px; font-size: 0.85rem; color: #4da6ff; text-decoration: none; border: 1px solid #444; }
-    .file-chip:hover { background: #444; }
 
-    /* Input & Preview Container */
     .input-wrapper { background: #252525; border-top: 1px solid #333; padding: 15px 20px; display: flex; flex-direction: column; gap: 8px; }
     .attachment-preview { display: flex; gap: 10px; flex-wrap: wrap; }
-    .preview-item { position: relative; display: inline-block; background: #1e1e1e; padding: 4px 8px; border-radius: 6px; font-size: 0.8rem; border: 1px solid #444; }
-    .preview-item .remove-btn { cursor: pointer; color: #ff5555; font-weight: bold; margin-left: 6px; }
+    .preview-thumb { position: relative; width: 60px; height: 60px; border-radius: 6px; overflow: hidden; border: 1px solid #555; }
+    .preview-thumb img { width: 100%; height: 100%; object-fit: cover; }
+    .preview-thumb .remove-btn { position: absolute; top: 2px; right: 2px; background: rgba(0,0,0,0.7); color: #ff5555; font-weight: bold; border-radius: 50%; width: 18px; height: 18px; display: flex; align-items: center; justify-content: center; cursor: pointer; font-size: 12px; }
 
     .input-container { display: flex; gap: 10px; align-items: center; }
     textarea { flex: 1; height: 50px; background: #1e1e1e; color: #fff; border: 1px solid #444; border-radius: 8px; padding: 10px; resize: none; outline: none; font-size: 1rem; }
     textarea:focus { border-color: #d97757; }
     
     .file-btn { background: #3a3a3a; color: #fff; border: 1px solid #555; padding: 0 14px; height: 50px; border-radius: 8px; cursor: pointer; font-size: 1.2rem; display: flex; align-items: center; justify-content: center; }
-    .file-btn:hover { background: #4a4a4a; }
     button.send-btn { background: #d97757; color: white; border: none; padding: 0 20px; height: 50px; border-radius: 8px; cursor: pointer; font-weight: bold; }
-    button.send-btn:hover { background: #c86545; }
     #fileInput { display: none; }
   </style>
 </head>
 <body>
 
-  <!-- Sidebar -->
   <div id="sidebar">
     <div class="sidebar-header">
       <span>Claude.ai by MHL</span>
+      <div><span class="status-badge">● Key đã kết nối</span></div>
     </div>
     <button class="new-chat-btn" onclick="startNewChat()">+ Đoạn chat mới</button>
     <div class="history-list" id="historyList"></div>
   </div>
 
-  <!-- Main Chat Area -->
   <div id="main">
     <div class="chat-header">
       <div class="brand">Claude.ai <span style="font-size: 0.8rem; color: #aaa;">by MHL</span></div>
     </div>
 
     <div class="chat-box" id="chatBox">
-      <div class="message bot">Xin chào! Tôi là Claude (by MHL). Bạn có thể gửi câu hỏi, hình ảnh hoặc file đính kèm!</div>
+      <div class="message bot">Xin chào! Tôi là Claude (by MHL). Hãy nhập tin nhắn hoặc gửi file/ảnh!</div>
     </div>
 
     <div class="input-wrapper">
       <div class="attachment-preview" id="attachmentPreview"></div>
       <div class="input-container">
-        <label for="fileInput" class="file-btn" title="Đính kèm file hoặc ảnh">📎</label>
-        <input type="file" id="fileInput" onchange="handleFileSelect(event)" />
-        <textarea id="userInput" placeholder="Nhập câu hỏi hoặc dán file vào đây..." onkeydown="handleKeyDown(event)"></textarea>
+        <label for="fileInput" class="file-btn" title="Đính kèm file hoặc ảnh">🖼️</label>
+        <input type="file" id="fileInput" multiple accept="image/*,.pdf,.txt,.py,.json" onchange="handleFileSelect(event)" />
+        <textarea id="userInput" placeholder="Nhập câu hỏi của bạn tại đây..." onkeydown="handleKeyDown(event)"></textarea>
         <button class="send-btn" onclick="sendMessage()">Gửi</button>
       </div>
     </div>
@@ -105,7 +101,7 @@
 
     function startNewChat() {
       currentChatId = Date.now().toString();
-      document.getElementById('chatBox').innerHTML = `<div class="message bot">Xin chào! Tôi là Claude (by MHL). Bạn có thể gửi câu hỏi, hình ảnh hoặc file đính kèm!</div>`;
+      document.getElementById('chatBox').innerHTML = `<div class="message bot">Xin chào! Tôi là Claude (by MHL). Hãy nhập tin nhắn hoặc gửi file/ảnh!</div>`;
       currentAttachments = [];
       renderAttachments();
     }
@@ -115,26 +111,22 @@
       const chatBox = document.getElementById('chatBox');
       chatBox.innerHTML = '';
       const messages = chatHistory[id] || [];
-      
       messages.forEach(msg => {
-        appendMessageUI(msg.role === 'user' ? 'user' : 'bot', msg.text, msg.files);
+        appendMessageUI(msg.role === 'user' ? 'user' : 'bot', msg.text, msg.images, msg.files);
       });
     }
 
     function handleFileSelect(e) {
-      const file = e.target.files[0];
-      if (!file) return;
-
-      const reader = new FileReader();
-      reader.onload = function(evt) {
-        currentAttachments.push({
-          name: file.name,
-          type: file.type,
-          data: evt.target.result
-        });
-        renderAttachments();
-      };
-      reader.readAsDataURL(file);
+      const files = Array.from(e.target.files);
+      if (!files.length) return;
+      files.forEach(file => {
+        const reader = new FileReader();
+        reader.onload = function(evt) {
+          currentAttachments.push({ name: file.name, type: file.type, data: evt.target.result });
+          renderAttachments();
+        };
+        reader.readAsDataURL(file);
+      });
       e.target.value = '';
     }
 
@@ -148,33 +140,38 @@
       preview.innerHTML = '';
       currentAttachments.forEach((att, idx) => {
         const item = document.createElement('div');
-        item.className = 'preview-item';
-        item.innerHTML = `📄 ${att.name} <span class="remove-btn" onclick="removeAttachment(${idx})">✕</span>`;
+        if (att.type.startsWith('image/')) {
+          item.className = 'preview-thumb';
+          item.innerHTML = `<img src="${att.data}" /><span class="remove-btn" onclick="removeAttachment(${idx})">✕</span>`;
+        } else {
+          item.className = 'file-chip';
+          item.innerHTML = `📄 ${att.name} <span style="color:#ff5555;cursor:pointer;" onclick="removeAttachment(${idx})">✕</span>`;
+        }
         preview.appendChild(item);
       });
     }
 
-    function appendMessageUI(role, text, files = []) {
+    function appendMessageUI(role, text, images = [], files = []) {
       const chatBox = document.getElementById('chatBox');
       const msgDiv = document.createElement('div');
       msgDiv.className = `message ${role}`;
 
       let contentHTML = `<div>${escapeHtml(text).replace(/\n/g, '<br>')}</div>`;
 
-      // Hiển thị file / ảnh gửi kèm
+      if (images && images.length > 0) {
+        contentHTML += `<div class="image-grid">`;
+        images.forEach(imgData => { contentHTML += `<img src="${imgData}" class="img-preview" />`; });
+        contentHTML += `</div>`;
+      }
+
       if (files && files.length > 0) {
         files.forEach(f => {
-          if (f.type && f.type.startsWith('image/')) {
-            contentHTML += `<img src="${f.data}" class="img-preview" />`;
-          } else {
-            contentHTML += `<a href="${f.data}" download="${f.name}" class="file-chip">💾 Tải về: ${f.name}</a>`;
-          }
+          contentHTML += `<a href="${f.data}" download="${f.name}" class="file-chip">💾 Tải về file: ${f.name}</a>`;
         });
       }
 
       msgDiv.innerHTML = contentHTML;
 
-      // Tự động quét code block hoặc file trả về từ AI để tạo nút tải file
       if (role === 'bot' && text.includes('```')) {
         const codeBlocks = text.match(/```[\s\S]*?```/g);
         if (codeBlocks) {
@@ -184,9 +181,9 @@
             const url = URL.createObjectURL(blob);
             const downloadBtn = document.createElement('a');
             downloadBtn.href = url;
-            downloadBtn.download = `file_output_${i + 1}.txt`;
+            downloadBtn.download = `output_file_${i + 1}.txt`;
             downloadBtn.className = 'file-chip';
-            downloadBtn.innerText = `💾 Tải file mã nguồn/kết quả (${i + 1})`;
+            downloadBtn.innerText = `💾 Tải file kết quả (${i + 1})`;
             msgDiv.appendChild(downloadBtn);
           });
         }
@@ -202,54 +199,61 @@
       const text = input.value.trim();
       if (!text && currentAttachments.length === 0) return;
 
-      const attachedFiles = [...currentAttachments];
+      const attachedImages = currentAttachments.filter(a => a.type.startsWith('image/')).map(a => a.data);
+      const attachedFiles = currentAttachments.filter(a => !a.type.startsWith('image/'));
+
       currentAttachments = [];
       renderAttachments();
 
-      appendMessageUI('user', text, attachedFiles);
+      appendMessageUI('user', text, attachedImages, attachedFiles);
       input.value = '';
 
       if (!chatHistory[currentChatId]) chatHistory[currentChatId] = [];
 
-      // Chuẩn bị payload gửi backend
-      let apiContent = text;
-      if (attachedFiles.length > 0) {
-        apiContent += "\n\n[File/Ảnh đính kèm]:\n" + attachedFiles.map(f => `${f.name}: ${f.data}`).join("\n");
-      }
-
       chatHistory[currentChatId].push({
         role: 'user',
         text: text,
+        images: attachedImages,
         files: attachedFiles,
-        summary: text || attachedFiles[0]?.name || 'File gửi lên'
+        summary: text || (attachedImages.length ? `[${attachedImages.length} Hình ảnh]` : 'File đính kèm')
       });
       saveHistory();
 
-      const loadingDiv = appendMessageUI('bot loading', '⏳ Claude đang xử lý...');
+      const loadingDiv = appendMessageUI('bot loading', '⏳ Claude đang trả lời...');
 
       try {
-        // Chuẩn bị tin nhắn gửi cho API
-        const payloadMessages = chatHistory[currentChatId].map(m => ({
-          role: m.role === 'user' ? 'user' : 'assistant',
-          content: m.text + (m.files && m.files.length > 0 ? "\n" + m.files.map(f => `[Attachment: ${f.name}]`).join(" ") : "")
-        }));
+        const formattedMessages = chatHistory[currentChatId].map(m => {
+          if (m.role === 'user' && m.images && m.images.length > 0) {
+            const contentArr = [];
+            if (m.text) contentArr.push({ type: "text", text: m.text });
+            m.images.forEach(imgData => {
+              const matches = imgData.match(/^data:(image\/\w+);base64,(.+)$/);
+              if (matches) {
+                contentArr.push({
+                  type: "image",
+                  source: { type: "base64", media_type: matches[1], data: matches[2] }
+                });
+              }
+            });
+            return { role: 'user', content: contentArr };
+          }
+          return { role: m.role === 'user' ? 'user' : 'assistant', content: m.text || "" };
+        });
 
-        const res = await fetch('/api/chat', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ messages: payloadMessages })
+        // Gọi về API Serverless của Vercel
+        const res = await fetch("/api/chat", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ messages: formattedMessages })
         });
 
         const data = await res.json();
-        if (data.error) throw new Error(data.error);
+        if (!res.ok || data.error) throw new Error(data.error || `HTTP ${res.status}`);
 
         loadingDiv.remove();
         appendMessageUI('bot', data.reply);
 
-        chatHistory[currentChatId].push({
-          role: 'assistant',
-          text: data.reply
-        });
+        chatHistory[currentChatId].push({ role: 'assistant', text: data.reply });
         saveHistory();
       } catch (err) {
         loadingDiv.classList.remove('loading');
@@ -274,4 +278,4 @@
     }
   </script>
 </body>
-</html>
+        </html>
