@@ -23,17 +23,30 @@
     .brand { font-size: 1.2rem; font-weight: bold; color: #d97757; }
     
     .chat-box { flex: 1; overflow-y: auto; padding: 20px; display: flex; flex-direction: column; gap: 15px; }
-    .message { max-width: 80%; padding: 12px 16px; border-radius: 12px; line-height: 1.5; white-space: pre-wrap; font-size: 0.95rem; }
+    .message { max-width: 80%; padding: 12px 16px; border-radius: 12px; line-height: 1.5; font-size: 0.95rem; word-break: break-word; }
     .user { background: #3a3a3a; align-self: flex-end; color: #fff; border-bottom-right-radius: 2px; }
     .bot { background: #1e1e1e; align-self: flex-start; color: #e1e1e1; border-bottom-left-radius: 2px; border: 1px solid #333; }
     .loading { font-style: italic; color: #888; }
 
-    /* Input Box */
-    .input-container { padding: 20px; background: #252525; border-top: 1px solid #333; display: flex; gap: 10px; }
+    .img-preview { max-width: 100%; max-height: 250px; border-radius: 8px; margin-top: 8px; display: block; }
+    .file-chip { display: inline-flex; align-items: center; gap: 8px; background: #333; padding: 6px 12px; border-radius: 6px; margin-top: 6px; font-size: 0.85rem; color: #4da6ff; text-decoration: none; border: 1px solid #444; }
+    .file-chip:hover { background: #444; }
+
+    /* Input & Preview Container */
+    .input-wrapper { background: #252525; border-top: 1px solid #333; padding: 15px 20px; display: flex; flex-direction: column; gap: 8px; }
+    .attachment-preview { display: flex; gap: 10px; flex-wrap: wrap; }
+    .preview-item { position: relative; display: inline-block; background: #1e1e1e; padding: 4px 8px; border-radius: 6px; font-size: 0.8rem; border: 1px solid #444; }
+    .preview-item .remove-btn { cursor: pointer; color: #ff5555; font-weight: bold; margin-left: 6px; }
+
+    .input-container { display: flex; gap: 10px; align-items: center; }
     textarea { flex: 1; height: 50px; background: #1e1e1e; color: #fff; border: 1px solid #444; border-radius: 8px; padding: 10px; resize: none; outline: none; font-size: 1rem; }
     textarea:focus { border-color: #d97757; }
-    button.send-btn { background: #d97757; color: white; border: none; padding: 0 20px; border-radius: 8px; cursor: pointer; font-weight: bold; }
+    
+    .file-btn { background: #3a3a3a; color: #fff; border: 1px solid #555; padding: 0 14px; height: 50px; border-radius: 8px; cursor: pointer; font-size: 1.2rem; display: flex; align-items: center; justify-content: center; }
+    .file-btn:hover { background: #4a4a4a; }
+    button.send-btn { background: #d97757; color: white; border: none; padding: 0 20px; height: 50px; border-radius: 8px; cursor: pointer; font-weight: bold; }
     button.send-btn:hover { background: #c86545; }
+    #fileInput { display: none; }
   </style>
 </head>
 <body>
@@ -54,22 +67,26 @@
     </div>
 
     <div class="chat-box" id="chatBox">
-      <div class="message bot">Xin chào! Tôi là Claude (by MHL). Bạn cần tôi giúp gì hôm nay?</div>
+      <div class="message bot">Xin chào! Tôi là Claude (by MHL). Bạn có thể gửi câu hỏi, hình ảnh hoặc file đính kèm!</div>
     </div>
 
-    <div class="input-container">
-      <textarea id="userInput" placeholder="Nhập câu hỏi của bạn tại đây..." onkeydown="handleKeyDown(event)"></textarea>
-      <button class="send-btn" onclick="sendMessage()">Gửi</button>
+    <div class="input-wrapper">
+      <div class="attachment-preview" id="attachmentPreview"></div>
+      <div class="input-container">
+        <label for="fileInput" class="file-btn" title="Đính kèm file hoặc ảnh">📎</label>
+        <input type="file" id="fileInput" onchange="handleFileSelect(event)" />
+        <textarea id="userInput" placeholder="Nhập câu hỏi hoặc dán file vào đây..." onkeydown="handleKeyDown(event)"></textarea>
+        <button class="send-btn" onclick="sendMessage()">Gửi</button>
+      </div>
     </div>
   </div>
 
   <script>
     let currentChatId = Date.now().toString();
     let chatHistory = JSON.parse(localStorage.getItem('mhl_chat_history') || '{}');
+    let currentAttachments = [];
 
-    window.onload = () => {
-      renderSidebar();
-    };
+    window.onload = () => { renderSidebar(); };
 
     function renderSidebar() {
       const historyList = document.getElementById('historyList');
@@ -79,7 +96,7 @@
       keys.forEach(id => {
         const item = document.createElement('div');
         item.className = 'history-item';
-        const firstMsg = chatHistory[id][0]?.content || 'Đoạn chat mới';
+        const firstMsg = chatHistory[id][0]?.summary || 'Đoạn chat mới';
         item.innerText = firstMsg;
         item.onclick = () => loadChat(id);
         historyList.appendChild(item);
@@ -88,7 +105,9 @@
 
     function startNewChat() {
       currentChatId = Date.now().toString();
-      document.getElementById('chatBox').innerHTML = `<div class="message bot">Xin chào! Tôi là Claude (by MHL). Bạn cần tôi giúp gì hôm nay?</div>`;
+      document.getElementById('chatBox').innerHTML = `<div class="message bot">Xin chào! Tôi là Claude (by MHL). Bạn có thể gửi câu hỏi, hình ảnh hoặc file đính kèm!</div>`;
+      currentAttachments = [];
+      renderAttachments();
     }
 
     function loadChat(id) {
@@ -98,15 +117,81 @@
       const messages = chatHistory[id] || [];
       
       messages.forEach(msg => {
-        appendMessage(msg.role === 'user' ? 'user' : 'bot', msg.content);
+        appendMessageUI(msg.role === 'user' ? 'user' : 'bot', msg.text, msg.files);
       });
     }
 
-    function appendMessage(role, text) {
+    function handleFileSelect(e) {
+      const file = e.target.files[0];
+      if (!file) return;
+
+      const reader = new FileReader();
+      reader.onload = function(evt) {
+        currentAttachments.push({
+          name: file.name,
+          type: file.type,
+          data: evt.target.result
+        });
+        renderAttachments();
+      };
+      reader.readAsDataURL(file);
+      e.target.value = '';
+    }
+
+    function removeAttachment(index) {
+      currentAttachments.splice(index, 1);
+      renderAttachments();
+    }
+
+    function renderAttachments() {
+      const preview = document.getElementById('attachmentPreview');
+      preview.innerHTML = '';
+      currentAttachments.forEach((att, idx) => {
+        const item = document.createElement('div');
+        item.className = 'preview-item';
+        item.innerHTML = `📄 ${att.name} <span class="remove-btn" onclick="removeAttachment(${idx})">✕</span>`;
+        preview.appendChild(item);
+      });
+    }
+
+    function appendMessageUI(role, text, files = []) {
       const chatBox = document.getElementById('chatBox');
       const msgDiv = document.createElement('div');
       msgDiv.className = `message ${role}`;
-      msgDiv.innerText = text;
+
+      let contentHTML = `<div>${escapeHtml(text).replace(/\n/g, '<br>')}</div>`;
+
+      // Hiển thị file / ảnh gửi kèm
+      if (files && files.length > 0) {
+        files.forEach(f => {
+          if (f.type && f.type.startsWith('image/')) {
+            contentHTML += `<img src="${f.data}" class="img-preview" />`;
+          } else {
+            contentHTML += `<a href="${f.data}" download="${f.name}" class="file-chip">💾 Tải về: ${f.name}</a>`;
+          }
+        });
+      }
+
+      msgDiv.innerHTML = contentHTML;
+
+      // Tự động quét code block hoặc file trả về từ AI để tạo nút tải file
+      if (role === 'bot' && text.includes('```')) {
+        const codeBlocks = text.match(/```[\s\S]*?```/g);
+        if (codeBlocks) {
+          codeBlocks.forEach((block, i) => {
+            const cleanCode = block.replace(/^```[a-zA-Z]*\n?/, '').replace(/```$/, '');
+            const blob = new Blob([cleanCode], { type: 'text/plain;charset=utf-8' });
+            const url = URL.createObjectURL(blob);
+            const downloadBtn = document.createElement('a');
+            downloadBtn.href = url;
+            downloadBtn.download = `file_output_${i + 1}.txt`;
+            downloadBtn.className = 'file-chip';
+            downloadBtn.innerText = `💾 Tải file mã nguồn/kết quả (${i + 1})`;
+            msgDiv.appendChild(downloadBtn);
+          });
+        }
+      }
+
       chatBox.appendChild(msgDiv);
       chatBox.scrollTop = chatBox.scrollHeight;
       return msgDiv;
@@ -115,37 +200,56 @@
     async function sendMessage() {
       const input = document.getElementById('userInput');
       const text = input.value.trim();
-      if (!text) return;
+      if (!text && currentAttachments.length === 0) return;
 
-      // Hiển thị câu hỏi của user
-      appendMessage('user', text);
+      const attachedFiles = [...currentAttachments];
+      currentAttachments = [];
+      renderAttachments();
+
+      appendMessageUI('user', text, attachedFiles);
       input.value = '';
 
-      // Lưu câu hỏi vào LS
       if (!chatHistory[currentChatId]) chatHistory[currentChatId] = [];
-      chatHistory[currentChatId].push({ role: 'user', content: text });
+
+      // Chuẩn bị payload gửi backend
+      let apiContent = text;
+      if (attachedFiles.length > 0) {
+        apiContent += "\n\n[File/Ảnh đính kèm]:\n" + attachedFiles.map(f => `${f.name}: ${f.data}`).join("\n");
+      }
+
+      chatHistory[currentChatId].push({
+        role: 'user',
+        text: text,
+        files: attachedFiles,
+        summary: text || attachedFiles[0]?.name || 'File gửi lên'
+      });
       saveHistory();
 
-      // Tạo hiệu ứng chờ kết quả
-      const loadingDiv = appendMessage('bot loading', '⏳ Đang đợi Claude trả lời...');
+      const loadingDiv = appendMessageUI('bot loading', '⏳ Claude đang xử lý...');
 
       try {
-        // Gọi API backend (Vercel Serverless Function)
+        // Chuẩn bị tin nhắn gửi cho API
+        const payloadMessages = chatHistory[currentChatId].map(m => ({
+          role: m.role === 'user' ? 'user' : 'assistant',
+          content: m.text + (m.files && m.files.length > 0 ? "\n" + m.files.map(f => `[Attachment: ${f.name}]`).join(" ") : "")
+        }));
+
         const res = await fetch('/api/chat', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ messages: chatHistory[currentChatId] })
+          body: JSON.stringify({ messages: payloadMessages })
         });
 
         const data = await res.json();
         if (data.error) throw new Error(data.error);
 
-        // Hiển thị câu trả lời
-        loadingDiv.classList.remove('loading');
-        loadingDiv.innerText = data.reply;
+        loadingDiv.remove();
+        appendMessageUI('bot', data.reply);
 
-        // Lưu câu trả lời vào LS
-        chatHistory[currentChatId].push({ role: 'assistant', content: data.reply });
+        chatHistory[currentChatId].push({
+          role: 'assistant',
+          text: data.reply
+        });
         saveHistory();
       } catch (err) {
         loadingDiv.classList.remove('loading');
@@ -163,6 +267,10 @@
         e.preventDefault();
         sendMessage();
       }
+    }
+
+    function escapeHtml(str) {
+      return str.replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;");
     }
   </script>
 </body>
