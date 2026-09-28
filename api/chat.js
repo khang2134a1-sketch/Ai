@@ -1,13 +1,11 @@
 const fetch = require('node-fetch');
 
 export default async function handler(req, res) {
-  // Chỉ chấp nhận method POST
   if (req.method !== 'POST') {
     return res.status(405).json({ error: 'Method not allowed' });
   }
 
   const { messages } = req.body;
-  // Lấy API Key từ Biến môi trường (Environment Variable) trên Vercel
   const apiKey = process.env.CODECRAFT_API_KEY;
 
   if (!apiKey) {
